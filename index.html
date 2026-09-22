@@ -86,7 +86,7 @@
             bestMove = moves[i];
           }
           alpha = Math.max(alpha, evaluation);
-          if (beta <= alpha) break; // Alpha-Beta Pruning (Mencegah Lag)
+          if (beta <= alpha) break;
         }
         return [maxEval, bestMove];
       } else {
@@ -130,7 +130,6 @@
     }
 
     function onDragStart(source, piece, position, orientation) {
-      // Cegah geser jika game over, giliran bot, atau coba pegang bidak hitam
       if (game.game_over()) return false;
       if (game.turn() === 'b' || piece.search(/^b/) !== -1) {
         return false;
@@ -178,10 +177,15 @@
       updateStatus();
     }
 
-    // Inisialisasi Papan
+    // PENTING: Menggunakan CDN Gambar Bidak SVG Resmi Wikipedia
+    function pieceTheme (piece) {
+      return 'https://chessboardjs.com/img/chesspieces/wikipedia/' + piece + '.png';
+    }
+
     board = Chessboard('board', {
       draggable: true,
       position: 'start',
+      pieceTheme: pieceTheme,
       onDragStart: onDragStart,
       onDrop: onDrop,
       onSnapEnd: onSnapEnd
