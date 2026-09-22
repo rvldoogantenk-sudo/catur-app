@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+  <style>
+    body { margin: 0; padding: 10px; display: flex; justify-content: center; background: #222; color: #fff; }
+    #board { width: 100%; max-width: 360px; }
+  </style>
+</head>
+<body>
+
+<div id="board"></div>
+
+<script>
+  var board = null;
+  var game = new Chess();
+  var gameMode = 'pvp';
+  var botLevel = 1;
+
+  function setConfiguration(mode, level) {
+    gameMode = mode;
+    botLevel = parseInt(level);
+    resetGame();
+  }
+
+  function onDragStart (source, piece) {
+    if (game.game_over()) return false;
+    if (gameMode === 'bot' && game.turn() === 'b') return false;
+    if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+        (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+      return false;
+    }
+  }
+
+  function makeBotMove () {
+    var possibleMoves = game.moves({ verbose: true });
+    if (possibleMoves.length === 0 || game.game_over()) return;
+
+    var selectedMove = null;
+    if (botLevel === 1) {
+      selectedMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+    } else {
+      var captureMoves = possibleMoves.filter(m => m.captured);
+      if (captureMoves.length > 0) {
+        selectedMove = captureMoves[Math.floor(Math.random() * captureMoves.length)];
+      } else {
+        selectedMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+      }
+    }
+
+    game.move(selectedMove);
+    board.position(game.fen());
+    updateStatus();
+  }
+
+  function onDrop (source, target) {
+    var move = game.move({ from: source, to: target, promotion: 'q' });
+    if (move === null) return 'snapback';
+    updateStatus();
+
+    if (gameMode === 'bot' && game.turn() === 'b' && !game.game_over()) {
+      window.setTimeout(makeBotMove, 400);
+    }
+  }
+
+  function onSnapEnd () { board.position(game.fen()); }
+
+  function updateStatus () {
+    var status = '';
+    var moveColor = (game.turn() === 'w') ? 'Putih' : 'Hitam';
+
+    if (game.in_checkmate()) {
+      var pemenang = (game.turn() === 'w') ? 'Hitam' : 'Putih';
+      status = 'SKAKMAT! Pemenang: ' + pemenang;
+    } else if (game.in_draw()) {
+      status = 'SERI (Draw)!';
+    } else {
+      status = (gameMode === 'bot' && game.turn() === 'b') ? 'BOT Berpikir...' : 'Giliran: ' + moveColor;
+      if (game.in_check()) status += ' (SKAK!)';
+    }
+
+    if (window.AppInventor) {
+      window.AppInventor.setWebViewString(status);
+    }
+  }
+
+  function resetGame() {
+    game.reset();
+    board.start();
+    updateStatus();
+  }
+
+  board = Chessboard('board', {
+    draggable: true,
+    position: 'start',
+    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+    onDragStart: onDragStart,
+    onDrop: onDrop,
+    onSnapEnd: onSnapEnd
+  });
+
+  updateStatus();
+</script>
+</body>
+</html>
