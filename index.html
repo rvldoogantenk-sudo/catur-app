@@ -2,44 +2,112 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Catur AI Mobile</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Game Catur AI</title>
+  
+  <!-- CSS Chessboard -->
+  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+  
   <style>
-    * { box-sizing: border-box; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; background: #121212; color: #ffffff; margin: 0; padding: 15px; }
-    h2 { margin: 5px 0 15px 0; font-size: 20px; }
-    .controls { margin-bottom: 15px; }
-    select, button { padding: 10px 14px; font-size: 14px; margin: 3px; border-radius: 8px; border: none; font-weight: bold; outline: none; }
-    select { background: #2c2c2c; color: #ffffff; border: 1px solid #444; }
-    button { background: #28a745; color: white; cursor: pointer; }
-    button:active { background: #1e7e34; }
-    #board { width: 92vw; max-width: 380px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden; }
-    .status-box { margin-top: 15px; padding: 10px; background: #1e1e1e; border-radius: 8px; border: 1px solid #333; display: inline-block; width: 92vw; max-width: 380px; }
-    .status-text { font-size: 15px; font-weight: bold; color: #00e676; }
+    /* 1. Kunci Seluruh Layar HP (Anti-Scroll & Anti-Zoom) */
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden; /* Matikan scrollbar */
+      touch-action: none; /* Mencegah gesture layar geser */
+      background: #121212;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* 2. Style Kontrol Atas */
+    .controls {
+      margin-bottom: 10px;
+      z-index: 10;
+    }
+
+    select, button {
+      padding: 8px 12px;
+      font-size: 14px;
+      margin: 2px;
+      border-radius: 6px;
+      border: none;
+      font-weight: bold;
+      outline: none;
+    }
+
+    select {
+      background: #2a2a2a;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    button {
+      background: #28a745;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button:active {
+      background: #1e7e34;
+    }
+
+    /* 3. Papan Catur Presisi di Tengah Layar */
+    #board {
+      width: 88vw;
+      max-width: 360px;
+      margin: 0 auto;
+      touch-action: manipulation; /* Biar cuma bidaknya yang bisa ditarik */
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    /* Fix ukuran gambar bidak agar tidak terdistorsi */
+    .piece-417db {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+
+    /* 4. Style Box Status */
+    .status-box {
+      margin-top: 12px;
+      padding: 8px 15px;
+      background: #1e1e1e;
+      border-radius: 6px;
+      border: 1px solid #333;
+      font-weight: bold;
+      color: #00e676;
+      font-size: 14px;
+      min-width: 250px;
+    }
   </style>
 </head>
 <body>
-
-  <h2>🎮 Game Catur vs Bot AI</h2>
 
   <div class="controls">
     <select id="difficulty" onchange="changeDifficulty()">
       <option value="easy">Mudah (Acak)</option>
       <option value="medium" selected>Sedang (Taktis)</option>
-      <option value="hard">Sulit (Minimax AI)</option>
+      <option value="hard">Sulit (Minimax)</option>
     </select>
     <button onclick="resetGame()">Ulang Game</button>
   </div>
 
   <div id="board"></div>
 
-  <div class="status-box">
-    <div class="status-text" id="status">Loading...</div>
-  </div>
+  <div class="status-box" id="status">Loading...</div>
 
+  <!-- JS Dependencies -->
   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
   <script>
@@ -53,6 +121,7 @@
       difficulty = document.getElementById('difficulty').value;
     }
 
+    // Evaluasi posisi papan untuk AI
     function evaluateBoard(boardState) {
       var totalEval = 0;
       for (var i = 0; i < 8; i++) {
@@ -67,6 +136,7 @@
       return totalEval;
     }
 
+    // Algoritma Minimax dengan Alpha-Beta Pruning
     function minimax(gameObj, depth, alpha, beta, isMaximizing) {
       if (depth === 0 || gameObj.game_over()) {
         return [evaluateBoard(gameObj.board()), null];
@@ -106,6 +176,7 @@
       }
     }
 
+    // Logika Pergerakan Bot AI
     function makeBotMove() {
       if (game.game_over()) return;
 
@@ -129,6 +200,7 @@
       }
     }
 
+    // KUNCI BIDAK HITAM: Mencegah user menggerakkan bidak hitam
     function onDragStart(source, piece, position, orientation) {
       if (game.game_over()) return false;
       if (game.turn() === 'b' || piece.search(/^b/) !== -1) {
@@ -155,13 +227,13 @@
 
     function updateStatus() {
       var statusEl = document.getElementById('status');
-      var moveColor = game.turn() === 'b' ? 'Bot Hitam (Berpikir...)' : 'Putih (Kamu)';
+      var moveColor = game.turn() === 'b' ? 'Bot Hitam (Mikir...)' : 'Putih (Kamu)';
 
       if (game.in_checkmate()) {
         statusEl.innerText = 'Game Over! ' + (game.turn() === 'b' ? 'Kamu Menang 🎉' : 'Bot Menang 🤖');
         statusEl.style.color = '#ff5252';
       } else if (game.in_draw()) {
-        statusEl.innerText = 'Game Over! Hasil Remis (Draw)';
+        statusEl.innerText = 'Game Over! Remis (Draw)';
         statusEl.style.color = '#ffb74d';
       } else {
         var txt = 'Giliran: ' + moveColor;
@@ -177,18 +249,12 @@
       updateStatus();
     }
 
-    function pieceTheme (piece) {
-      var cdnUrl = 'https://commons.wikimedia.org/wiki/Special:FilePath/';
-      var mapping = {
-        'wP': 'Chess_plt45.svg', 'wR': 'Chess_rlt45.svg', 'wN': 'Chess_nlt45.svg',
-        'wB': 'Chess_blt45.svg', 'wQ': 'Chess_qlt45.svg', 'wK': 'Chess_klt45.svg',
-        'bP': 'Chess_pdt45.svg', 'bR': 'Chess_rdt45.svg', 'bN': 'Chess_ndt45.svg',
-        'bB': 'Chess_bdt45.svg', 'bQ': 'Chess_qdt45.svg', 'bK': 'Chess_kdt45.svg'
-      };
-      return cdnUrl + mapping[piece];
+    
+    function pieceTheme(piece) {
+      return 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/' + piece + '.png';
     }
 
-    board = Chessboard('board', {
+   board = Chessboard('board', {
     draggable: true,
     position: 'start',
     pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
@@ -196,7 +262,6 @@
     onDrop: onDrop,
     onSnapEnd: onSnapEnd
   });
-
 
 
     updateStatus();
